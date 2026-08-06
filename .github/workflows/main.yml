@@ -1,0 +1,6 @@
+- name: Show repository structure
+  shell: pwsh
+  run: |
+    Get-Location
+    Get-ChildItem -Force
+    Get-ChildItem -Recurse -Depth 2
