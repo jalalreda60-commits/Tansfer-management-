@@ -37,6 +37,10 @@ PySide6 and SQLAlchemy.
 transfer_management_system/
 ├── main.py                     # Entry point
 ├── requirements.txt
+├── build.spec                   # PyInstaller spec -> Windows .exe
+├── .github/workflows/
+│   └── build-exe.yml             # CI: builds & publishes the .exe
+├── .gitignore
 ├── app/
 │   ├── config.py                # Paths, enums, constants, colour palette
 │   ├── database.py               # SQLAlchemy engine/session bootstrap
@@ -103,6 +107,60 @@ python main.py
 
 The SQLite database is created automatically on first launch at
 `data/transfer_management.db` — no manual migration step needed.
+
+## Building the Windows .exe
+
+The project ships with a PyInstaller spec (`build.spec`) that produces a
+single-file `TransferManagementSystem.exe` with no Python installation
+required on the target machine.
+
+### Locally (on Windows)
+
+```bash
+pip install -r requirements.txt
+pip install pyinstaller
+pyinstaller build.spec --noconfirm --clean
+```
+
+The result is `dist/TransferManagementSystem.exe`. On first launch it
+creates `data/`, `attachments/` and `exports/` folders next to the .exe
+(or, if that folder isn't writable, under `%APPDATA%\Transfer Management
+System\`) — the database persists across restarts.
+
+### Automatically via GitHub Actions
+
+`.github/workflows/build-exe.yml` builds the .exe on a `windows-latest`
+runner:
+
+- **On every push to `main` / every pull request** — the .exe is
+  attached as a downloadable workflow artifact (Actions tab → the run →
+  "Artifacts").
+- **On every version tag** (e.g. `git tag v1.0.0 && git push --tags`) —
+  the .exe is additionally published as an asset on a GitHub Release.
+- You can also trigger it manually from the Actions tab
+  (`workflow_dispatch`).
+
+No extra repository secrets are needed — it uses the default
+`GITHUB_TOKEN`.
+
+To publish a release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### Notes for maintainers
+
+- The spec builds **onefile** mode (a single .exe). If startup time
+  matters more than a single file, switch `build.spec` to a `COLLECT()`
+  step for a faster-starting folder ("onedir") build instead.
+- To brand the .exe with an icon, drop a 256×256 `icon.ico` at
+  `app/resources/icon.ico` and set `icon="app/resources/icon.ico"` in
+  `build.spec`.
+- `app/config.py` detects `sys.frozen` (set by PyInstaller) and stores
+  data next to the .exe instead of inside the temporary extraction
+  folder — don't remove that check when refactoring paths.
 
 ## Notes on "Automatic Save"
 

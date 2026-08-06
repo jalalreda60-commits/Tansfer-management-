@@ -7,26 +7,45 @@ Centralises paths, enumerations and constants so every other module
 from __future__ import annotations
 
 import os
+import sys
 from enum import Enum
+
+APP_NAME = "Transfer Management System"
+APP_ORG = "TMS"
+APP_VERSION = "1.0.0"
 
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# When running from source, everything lives next to the project root.
+# When frozen by PyInstaller (a distributed .exe), sys._MEIPASS is a
+# temporary extraction folder that is wiped between runs, so persistent
+# data (the SQLite DB, attachments, exports) must instead live in a
+# writable, stable, per-user location next to the executable / in the
+# OS app-data folder — otherwise every launch would start with an empty
+# database.
+if getattr(sys, "frozen", False):
+    # Running as a PyInstaller-built executable.
+    BASE_DIR = os.path.dirname(sys.executable)
+    STYLES_DIR = os.path.join(getattr(sys, "_MEIPASS", BASE_DIR), "app", "resources", "styles")
+    if not os.access(BASE_DIR, os.W_OK):
+        # Fall back to a per-user app-data directory if installed to a
+        # read-only location (e.g. "Program Files").
+        appdata = os.getenv("APPDATA") or os.path.expanduser("~/.local/share")
+        BASE_DIR = os.path.join(appdata, APP_NAME)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    STYLES_DIR = os.path.join(BASE_DIR, "app", "resources", "styles")
+
 DATA_DIR = os.path.join(BASE_DIR, "data")
 ATTACHMENTS_DIR = os.path.join(BASE_DIR, "attachments")
 EXPORTS_DIR = os.path.join(BASE_DIR, "exports")
-STYLES_DIR = os.path.join(BASE_DIR, "app", "resources", "styles")
 
 for _dir in (DATA_DIR, ATTACHMENTS_DIR, EXPORTS_DIR):
     os.makedirs(_dir, exist_ok=True)
 
 DATABASE_PATH = os.path.join(DATA_DIR, "transfer_management.db")
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
-
-APP_NAME = "Transfer Management System"
-APP_ORG = "TMS"
-APP_VERSION = "1.0.0"
 
 # ---------------------------------------------------------------------------
 # Enumerations (stored as plain strings in SQLite for simplicity/readability)
